@@ -31,10 +31,10 @@ std::ostream& operator <<(std::ostream& stream, _Complex long double c)
 #endif // _FFT_USE_C99_COMPLEX
 
 #define fft_size 32//(32*1024*1024)
-#define fft_in_type long double
-#define fft_int_part_type long double
+#define fft_in_type double
+#define fft_int_part_type double
 #define fft_int_type std::complex<fft_int_part_type>
-#define fft_out_part_type long double
+#define fft_out_part_type double
 #define fft_out_type std::complex<fft_out_part_type>
 typedef fft::experimental::ctfft2::CTFFT2<fft_size,fft_int_type > ctfft2;
 

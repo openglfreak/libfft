@@ -74,7 +74,7 @@ namespace fft
 						*++p = _Num_CT::make(i0) - t0c;
 					}
 
-					for (size_t block = 4, shift = size_log2 - 3; block < size; block <<= 1, shift--)
+					for (size_t block = 4, shift = size_log2 - 3; block < size / 2; block <<= 1, shift--)
 			            for (size_t j = size; j; j -= block)
 			                for (size_t k = block; k--;)
 			                {

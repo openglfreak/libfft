@@ -30,15 +30,9 @@ namespace fft
 				size_t i;
 				for (i = copy_quarter ? _Length / 4 : (copy_half ? _Length / 2 : _PartLength); i--;)
 					values[i] = Num<T>::polar((i + _Start) * ((2 * Pi::get<typename Num<T>::part_type>()) / _Length));
-				/*if (copy_quarter)
-					for (i = _Length / 4; i < (copy_half ? _Length / 2 : _PartLength); i++)
-					{
-						T& v = values[i - _Length / 4];
-						values[i] = Num<T>::make(-Num<T>::imag(v), Num<T>::real(v));
-					}*/
 				if (copy_quarter)
 				{
-					// If I just copy and multiply by i, real values would become zero, so I backwards-copy and flip the sign of the real part (f(x) = -conj(f(x-PI/2)))
+					// If I'd just copy and multiply by i, real values would become zero, so I backwards-copy and flip the sign of the real part (f(x) = -conj(f(x-PI/2)))
 					T* p = &values[_Length / 4];
 					*p = Num<T>::make(0, 1);
 					for (i = _Length / 4 + 1; i < (copy_half ? _Length / 2 : _PartLength); i++)
