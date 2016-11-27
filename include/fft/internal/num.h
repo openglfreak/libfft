@@ -1,8 +1,6 @@
 #ifndef __FFT_INTERNAL_NUM_H__
 #define __FFT_INTERNAL_NUM_H__
 
-#define _FFT_USE_C99_COMPLEX
-
 #include <complex>
 #ifdef _FFT_USE_C99_COMPLEX
 #include <complex.h>
@@ -71,7 +69,7 @@ namespace fft
 			template<typename _P>
 			static T polar(_P const& p)
 			{
-				return polar(p, 1);
+				return polar<_P,_P>(p, 1);
 			}
 			template<typename _P, typename _M>
 			static T polar(_P const& p, _M const& m = 1)
@@ -138,7 +136,7 @@ namespace fft
 			template<typename _P>
 			static float polar(_P const& p)
 			{
-				return polar(p, 1);
+				return polar<_P,_P>(p, 1);
 			}
 			template<typename _P, typename _M>
 			static float polar(_P const& p, _M const& m = 1)
@@ -205,7 +203,7 @@ namespace fft
 			template<typename _P>
 			static double polar(_P const& p)
 			{
-				return polar(p, 1);
+				return polar<_P,_P>(p, 1);
 			}
 			template<typename _P, typename _M>
 			static double polar(_P const& p, _M const& m = 1)
@@ -272,7 +270,7 @@ namespace fft
 			template<typename _P>
 			static long double polar(_P const& p)
 			{
-				return polar(p, 1);
+				return polar<_P,_P>(p, 1);
 			}
 			template<typename _P, typename _M>
 			static long double polar(_P const& p, _M const& m = 1)
@@ -341,7 +339,7 @@ namespace fft
 			template<typename _P>
 			static _Complex float polar(_P const& p)
 			{
-				return polar(p, 1);
+				return polar<_P,_P>(p, 1);
 			}
 			template<typename _P, typename _M>
 			static _Complex float polar(_P const& p, _M const& m = 1)
@@ -383,7 +381,7 @@ namespace fft
 
 			static _Complex double conj(_Complex double v)
 			{
-				return conj(v);
+				return ::conj(v);
 			}
 			template<typename _P>
 			static _Complex double sin(_P const& p)
@@ -409,7 +407,7 @@ namespace fft
 			template<typename _P>
 			static _Complex double polar(_P const& p)
 			{
-				return polar(p, 1);
+				return polar<_P,_P>(p, 1);
 			}
 			template<typename _P, typename _M>
 			static _Complex double polar(_P const& p, _M const& m = 1)
@@ -477,7 +475,7 @@ namespace fft
 			template<typename _P>
 			static _Complex long double polar(_P const& p)
 			{
-				return polar(p, 1);
+				return polar<_P,_P>(p, 1);
 			}
 			template<typename _P, typename _M>
 			static _Complex long double polar(_P const& p, _M const& m)
@@ -520,7 +518,7 @@ namespace fft
 
 			static std::complex<T> conj(std::complex<T> const& v)
 			{
-				return v.conj();
+				return std::conj(v);
 			}
 			template<typename _P>
 			static std::complex<T> sin(_P const& p)
@@ -546,12 +544,12 @@ namespace fft
 			template<typename _P>
 			static std::complex<T> polar(_P const& p)
 			{
-				return polar(p, 1);
+				return polar<_P,_P>(p, 1);
 			}
 			template<typename _P, typename _M>
 			static std::complex<T> polar(_P const& p, _M const& m)
 			{
-				return std::polar(m, p);
+				return std::polar<T>((T)Num<_M>::real(m), (T)Num<_P>::real(p));
 			}
 		};
 	}

@@ -21,46 +21,44 @@ namespace fft
 	{
 		namespace ctfft2
 		{
-			// // N = size, VT = Value Type, CT = Complex Type, RT = Real Type
-			// // RT has to be implicitly convertible to CTs value_type, and explicitly or implicitly convertible to VT
 			template<size_t N, typename CT>
 			class CTFFT2
 			{
 			private:
-				enum { nlog2 = fft::internal::Log<2,N>::value };
+				enum { size_log2 = fft::internal::Log<2,N>::value };
 			public:
-				enum { size = fft::internal::Pow<2,nlog2>::value };
+				enum { size = fft::internal::Pow<2,size_log2>::value };
 				typedef CT complex_type;
 			private:
 				typedef fft::internal::Num<CT> _Num_CT;
+			public:
 				fft::internal::UnitCircle<CT,size/2,0,size> unitCircle;
 			public:
 				CT buffer[size];
-			public:
-				CTFFT2() {}
+
+				CTFFT2() : unitCircle() {}
 
 				template<typename _InIter, typename _OutIter>
 				bool fft(_InIter in, _OutIter out)
 				{
-                    fft(in, out, typename std::iterator_traits<_InIter>::iterator_category());
-                    return true;
+                    return fft(in, out, typename std::iterator_traits<_InIter>::iterator_category(), typename std::iterator_traits<_OutIter>::iterator_category());
 				}
 			private:
 				template<typename _InIter, typename _OutIter>
-				bool fft(_InIter in, _OutIter out, std::random_access_iterator_tag)
+				bool fft(_InIter in, _OutIter out, std::random_access_iterator_tag, std::random_access_iterator_tag)
 				{
 			        typedef typename std::iterator_traits<_InIter>::value_type IT;
-			        //typedef typename std::iterator_traits<_OutIter>::value_type OT;
+			        typedef typename std::iterator_traits<_OutIter>::value_type OT;
 					typedef fft::internal::Num<IT> _Num_IT;
-					//typedef fft::internal::Num<OT> _Num_OT;
-					fft::internal::BitReversedCounter<nlog2-2> brc;
-					for (size_t i = size / 4; i--; --brc)
+					typedef fft::internal::Num<OT> _Num_OT;
+
+					fft::internal::BitReversedCounter<size_log2-2> brc = fft::internal::BitReversedCounter<size_log2-2>();
+					for (size_t i = size / 4; i--;)
 					{
-						IT i0 = *in;
-						IT i1 = *++in;
-						IT i2 = *++in;
-						IT i3 = *++in;
-						++in;
+						IT i0 = in[i];
+						IT i1 = in[i + size / 4];
+						IT i2 = in[i + size / 2];
+						IT i3 = in[i + size / 4 * 3];
 
 						IT t0 = i0 + i2;
 						i0 -= i2;
@@ -69,23 +67,63 @@ namespace fft
 						i1 -= i3;
 						CT t0c = _Num_CT::make(_Num_IT::imag(i1), -_Num_IT::real(i1));
 
-						CT* p = &buffer[brc.value << 2];
+						CT* p = &buffer[(--brc).value << 2];
 						*p = _Num_CT::make(t0 + t1);
 						*++p = _Num_CT::make(i0) + t0c;
 						*++p = _Num_CT::make(t0 - t1);
 						*++p = _Num_CT::make(i0) - t0c;
 					}
-					std::copy(&buffer[0], &buffer[size], out);
-					return false;
+
+					for (size_t block = 4, shift = size_log2 - 3; block < size; block <<= 1, shift--)
+			            for (size_t j = size; j; j -= block)
+			                for (size_t k = block; k--;)
+			                {
+			                    CT& i0 = buffer[--j - block];
+				                CT i1 = _Num_CT::conj(unitCircle.values[k << shift]) * buffer[j]; // TODO: optimize conj out
+			                    buffer[j] = i0 - i1;
+			                    buffer[j - block] = i0 + i1;
+			                }
+					for (size_t k = size / 2; k--;)
+			        {
+			            CT& i0 = buffer[k];
+			            CT i1 = _Num_CT::conj(unitCircle.values[k]) * buffer[k + size / 2];
+			            out[k + size / 2] = _Num_OT::make(i0 - i1);
+			            out[k] = _Num_OT::make(i0 + i1);
+			        }
+					return true;
 				}
 				template<typename _InIter, typename _OutIter>
-				void fft(_InIter in, _OutIter out, std::input_iterator_tag)
+				void fft(_InIter in, _OutIter out, std::random_access_iterator_tag, std::output_iterator_tag)
+				{
+					typedef typename std::iterator_traits<_OutIter>::value_type OT;
+					typedef fft::internal::Num<OT> _Num_OT;
+
+					if (!fft(in, &buffer[0], std::random_access_iterator_tag(), std::random_access_iterator_tag()))
+						return false;
+					for (CT* p = &buffer[0]; p != &buffer[size];)
+					{
+						*out = _Num_OT::make(*p);
+						*++out = _Num_OT::make(*++p);
+						*++out = _Num_OT::make(*++p);
+						*++out = _Num_OT::make(*++p);
+						++out; ++p;
+					}
+					return true;
+				}
+				template<typename _InIter, typename _OutIter>
+				void fft(_InIter in, _OutIter out, std::forward_iterator_tag, std::output_iterator_tag)
 				{
 					static typename std::iterator_traits<_InIter>::value_type temp[size];
 					typename std::iterator_traits<_InIter>::value_type* p = &temp;
-					for (size_t i = size; i--;)
-						*p++ = *in++;
-					return fft(&temp, out, std::random_access_iterator_tag());
+					for (size_t i = size / 4; i--;)
+					{
+						*p = *in;
+						*++p = *++in;
+						*++p = *++in;
+						*++p = *++in;
+						++p; ++in;
+					}
+					return fft(&temp, out, std::random_access_iterator_tag(), typename std::iterator_traits<_OutIter>::iterator_category());
 				}
 			};
 			template<typename CT>

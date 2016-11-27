@@ -1,7 +1,11 @@
 #ifndef __FFT_INTERNAL_BITREVERSEDCOUNTER_H__
 #define __FFT_INTERNAL_BITREVERSEDCOUNTER_H__
 
+#include <stdint.h>
+#ifdef _MSC_VER
 #include <intrin.h>
+#endif
+#include <limits.h>
 #include "../internal/intleast.h"
 
 namespace fft
@@ -62,100 +66,67 @@ namespace fft
 				return temp;
 			}*/
 		private:
-			inline type _make_mask()
 			#ifdef __GNUC__
-			__attribute__ ((always_inline))
+				__attribute__((always_inline))
+			#elif defined(_MSC_VER)
+				__forceinline
+			#else
+				inline
 			#endif
+			inline type _make_mask()
 			{
 				// mask to remove upper bits
 				return ((type)1 << _Bits) - 1;
 			}
-			#if defined x__GNUC__
-			void _inc()
-			{
-				if (value == _make_mask())
-					value = 0;
-				else
+
+			#ifdef __GNUC__
+				static unsigned char _bsr64(int64_t i) __attribute__ ((always_inline))
 				{
-					// this is black magic, don't even try to understand it!
-					// (it basically finds the most significant zero, shifts 3 to that position, and adds that to the original value)
-					// example:
-					//   10110000b
-					//    ^ most significant zero bit (bit #6)
-					//
-					//   3<<6
-					// = 11000000b
-					//
-					//   11000000b
-					// + 10110000b
-					// = 01110000b
-					//
-					// 01110000b is the new value
-					//
-					// IT WORKS, DON'T TOUCH IT!!!
-					value += (type)3 << ((sizeof(unsigned long long) * CHAR_BIT - 1) - __builtin_clzll((unsigned long long)~value & _make_mask()));
-					value &= _make_mask();
+					return 63 - (sizeof(unsigned int) == 8 ? __builtin_clz(i) : (sizeof(unsigned long) == 8 ? __builtin_clzl(i) : __builtin_clzll(i)));
 				}
-			}
-			void _dec()
-			{
-				if (value == 0)
-					value = _make_mask();
-				else
+
+				static unsigned char _bsr32(int32_t i) __attribute__ ((always_inline))
 				{
-					value -= (type)3 << ((sizeof(unsigned long long) * CHAR_BIT - 1) - __builtin_clzll(value));
-					value &= _make_mask();
+					return 31 - (sizeof(unsigned int) == 4 ? __builtin_clz(i) : (sizeof(unsigned long) == 4 ? __builtin_clzl(i) : __builtin_clzll(i)));
 				}
-			}
-			#elif defined(x_MSC_VER)
-			#pragma intrinsic(_BitScanReverse)
-			#ifdef _WIN64
-			#pragma intrinsic(_BitScanReverse64)
-			#define __bsr64 _BitScanReverse64
+			#elif defined(_MSC_VER)
+				#pragma intrinsic(_BitScanReverse)
+
+				#ifdef _WIN64
+					#pragma intrinsic(_BitScanReverse64)
+
+					static __forceinline unsigned char _bsr64(int64_t i)
+					{
+						unsigned long ret;
+						_BitScanReverse64(&ret, (__int64)i);
+						return ret;
+					}
+				#else
+					static __forceinline unsigned char _bsr64(int64_t i)
+					{
+						unsigned long ret;
+						if (i > 0xFFFFFFFF)
+						{
+							_BitScanReverse(&ret, (unsigned long)(i >> 32));
+							ret += 32;
+						}
+						else
+							_BitScanReverse(&ret, (unsigned long)i);
+						return ret;
+					}
+				#endif
+
+				static __forceinline unsigned char _bsr32(int32_t i)
+				{
+					unsigned long ret;
+					_BitScanReverse(&ret, (unsigned long)i);
+					return ret;
+				}
 			#else
-			void __bsr64(unsigned long* o, __int64 i)
-			{
-				if (i > 0xFFFFFFFF)
-				{
-					_BitScanReverse(o, (unsigned long)(i >> 32));
-					*o += 32;
-				}
-				else
-					_BitScanReverse(o, (unsigned long)i);
-			}
+				#define __BitReversedCounter_noopt
 			#endif
 
-			void _inc()
-			{
-				if (value == _make_mask())
-					value = 0;
-				else
-				{
-					unsigned long i;
-					if (_Bits > 32)
-						__bsr64(&i, (__int64)~value & _make_mask());
-					else
-						_BitScanReverse(&i, (unsigned long)~value & _make_mask());
-					value += (type)3 << i;
-					value &= _make_mask();
-				}
-			}
-			void _dec()
-			{
-				if (value == 0)
-					value = _make_mask();
-				else
-				{
-					unsigned long i;
-					if (_Bits > 32)
-						__bsr64(&i, value);
-					else
-						_BitScanReverse(&i, value);
-					value += (type)3 << i;
-					value &= _make_mask();
-				}
-			}
-			#else
+			#ifdef __BitReversedCounter_noopt
 			void _inc()
 			{
 				type mask = ((type)1 << (_Bits - 1));
@@ -167,6 +138,37 @@ namespace fft
 				type mask = ((type)1 << (_Bits - 1));
 				for (; mask && !(value & mask); mask >>= 1) value ^= mask;
 				value ^= mask;
+			}
+			#else
+			void _inc()
+			{
+				if (value == _make_mask())
+					value = 0;
+				else
+				{
+					unsigned char i;
+					if (_Bits > 32)
+						i = _bsr64((uint64_t)~value & _make_mask());
+					else
+						i = _bsr32((uint32_t)~value & _make_mask());
+					value += (type)3 << i;
+					value &= _make_mask();
+				}
+			}
+			void _dec()
+			{
+				if (value == 0)
+					value = _make_mask();
+				else
+				{
+					unsigned long i;
+					if (_Bits > 32)
+						i = _bsr64(value);
+					else
+						i = _bsr32(value);
+					value += (type)3 << i;
+					value &= _make_mask();
+				}
 			}
 			#endif
 		};

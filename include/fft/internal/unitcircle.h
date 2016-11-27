@@ -20,22 +20,34 @@ namespace fft
 				copy_half = (_Length % 2 == 0) && (_Length / 2 < _PartLength),
 				copy_full = _Length < _PartLength
 			};
-			typedef typename Num<T>::part_type part_type;
 		public:
 			typedef T type;
+			enum { part_length = _PartLength, start = _Start, length = _Length };
 			T values[_PartLength];
 
 			_UnitCircle()
 			{
 				size_t i;
 				for (i = copy_quarter ? _Length / 4 : (copy_half ? _Length / 2 : _PartLength); i--;)
-					values[i] = Num<T>::polar((i + _Start) * ((2 * Pi::get<part_type>()) / _Length));
-				if (copy_quarter)
+					values[i] = Num<T>::polar((i + _Start) * ((2 * Pi::get<typename Num<T>::part_type>()) / _Length));
+				/*if (copy_quarter)
 					for (i = _Length / 4; i < (copy_half ? _Length / 2 : _PartLength); i++)
 					{
 						T& v = values[i - _Length / 4];
 						values[i] = Num<T>::make(-Num<T>::imag(v), Num<T>::real(v));
+					}*/
+				if (copy_quarter)
+				{
+					// If I just copy and multiply by i, real values would become zero, so I backwards-copy and flip the sign of the real part (f(x) = -conj(f(x-PI/2)))
+					T* p = &values[_Length / 4];
+					*p = Num<T>::make(0, 1);
+					for (i = _Length / 4 + 1; i < (copy_half ? _Length / 2 : _PartLength); i++)
+					{
+						values[i] = -Num<T>::conj(*(--p));
+						if (p == &values[0])
+							p = &values[_Length / 4];
 					}
+				}
 				if (copy_half)
 					for (i = _Length / 2; i < (copy_full ? _Length : _PartLength); i++)
 						values[i] = -values[i - _Length / 2];
@@ -53,28 +65,16 @@ namespace fft
 		class _UnitCircle<T,_PartLength,_Start,_Length,0>
 		{
 		public:
+			typedef T type;
+			enum { part_length = _PartLength, start = _Start, length = _Length };
 			T values[_PartLength];
 
 			_UnitCircle()
 			{
-				// values[x] = (T)cosf((x + _Start) * ((2 * M_PI) / _Length)) = [1,0,-1]
-				// values[i*_Length/2-_Start] = (T)cosf(i * M_PI)
 				values[0] = 1;
 				signed char v = 1;
 				for (size_t i = _Length / 2 - _Start % (_Length / 2); i < _PartLength; i += _Length / 2)
 					values[i] = v = -v;
-			}
-		};
-		template<typename T, size_t _PartLength, size_t _Start, size_t _Length>
-		class _UnitCircle<T,_PartLength,_Start,_Length,1>
-		{
-		public:
-			T values[_PartLength];
-
-			_UnitCircle()
-			{
-				for (size_t i = _PartLength; i--;)
-					values[i] = Num<T>::cos((i + _Start) * ((2 * Pi::get<T>()) / _Length));
 			}
 		};
 
