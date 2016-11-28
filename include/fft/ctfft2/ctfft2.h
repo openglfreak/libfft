@@ -31,12 +31,20 @@ namespace fft
 				typedef CT complex_type;
 			private:
 				typedef fft::internal::Num<CT> _Num_CT;
-			public:
-				fft::internal::UnitCircle<CT,size/2,0,size> unitCircle;
-			public:
-				CT buffer[size];
+				typedef fft::internal::UnitCircle<CT,size/2,0,size> _UnitCircle;
 
-				CTFFT2() : unitCircle() {}
+				CT unitCircle[(size / 2) + (size / 2 - 4)];
+				CT buffer[size];
+				CTFFT2(CTFFT2 const&) {}
+			public:
+				CTFFT2()
+				{
+					_UnitCircle::calc(&unitCircle[0]);
+					for (size_t i = size / 2; i--;)
+						unitCircle[i] = _Num_CT::conj(unitCircle[i]);
+					for (CT* p = &unitCircle[0], *p2 = &unitCircle[size/2]; (p2 - p) > 4; p += 2, p2++)
+						*p2 = *p;
+				}
 
 				template<typename _InIter, typename _OutIter>
 				bool fft(_InIter in, _OutIter out)
@@ -74,19 +82,23 @@ namespace fft
 						*++p = _Num_CT::make(i0) - t0c;
 					}
 
-					for (size_t block = 4, shift = size_log2 - 3; block < size / 2; block <<= 1, shift--)
-			            for (size_t j = size; j; j -= block)
-			                for (size_t k = block; k--;)
-			                {
-			                    CT& i0 = buffer[--j - block];
-				                CT i1 = _Num_CT::conj(unitCircle.values[k << shift]) * buffer[j]; // TODO: optimize conj out
-			                    buffer[j] = i0 - i1;
-			                    buffer[j - block] = i0 + i1;
-			                }
+					if (size > 8)
+					{
+						CT* p = &unitCircle[(size /2) + (size / 2 - 4) - 4];
+						for (size_t block = 4, shift = size_log2 - 3; block < size / 2; p -= (block <<= 1), shift--)
+				            for (size_t j = size; j; j -= block)
+				                for (size_t k = block; k--;)
+				                {
+				                    CT& i0 = buffer[--j - block];
+					                CT i1 = p[k] * buffer[j];
+				                    buffer[j] = i0 - i1;
+				                    buffer[j - block] = i0 + i1;
+				                }
+					}
 					for (size_t k = size / 2; k--;)
 			        {
 			            CT& i0 = buffer[k];
-			            CT i1 = _Num_CT::conj(unitCircle.values[k]) * buffer[k + size / 2];
+			            CT i1 = unitCircle[k] * buffer[k + size / 2];
 			            out[k + size / 2] = _Num_OT::make(i0 - i1);
 			            out[k] = _Num_OT::make(i0 + i1);
 			        }
@@ -133,8 +145,6 @@ namespace fft
 				enum { size = 0 };
 				typedef CT complex_type;
 			public:
-				CTFFT2() {}
-
 				template<typename _InIter, typename _OutIter>
 				bool fft(_InIter in, _OutIter out)
 				{
@@ -148,8 +158,6 @@ namespace fft
 				enum { size = 1 };
 				typedef CT complex_type;
 			public:
-				CTFFT2() {}
-
 				template<typename _InIter, typename _OutIter>
 				bool fft(_InIter in, _OutIter out)
 				{
@@ -164,8 +172,6 @@ namespace fft
 				enum { size = 2 };
 				typedef CT complex_type;
 			public:
-				CTFFT2() {}
-
 				template<typename _InIter, typename _OutIter>
 				bool fft(_InIter in, _OutIter out)
 				{
@@ -187,8 +193,6 @@ namespace fft
 				enum { size = 4 };
 				typedef CT complex_type;
 			public:
-				CTFFT2() {}
-
 				template<typename _InIter, typename _OutIter>
 				bool fft(_InIter in, _OutIter out)
 				{
