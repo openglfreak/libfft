@@ -1,10 +1,15 @@
+// TODO: add pragma once to all headers
+#include <stddef.h>
+
 #define _FFT_USE_C99_COMPLEX
 //#define __BitReversedCounter_noopt
-#include "../../include/fft/ctfft2/ctfft2.h"
+#include <fft/abandoned/ctfft2/ctfft2.h>
 #include <iostream>
 #include <iomanip>
 #include <limits>
 #include <bitset>
+
+#include <fft/experimental/ctfft/ctfft.h>
 
 #ifdef _FFT_USE_C99_COMPLEX
 std::ostream& operator <<(std::ostream& stream, _Complex float c)
@@ -57,11 +62,91 @@ struct __dummy_ctor_class
 
 #define __optimize_barrier() __asm__ __volatile__ ("":::"memory")
 
+fft::experimental::CTFFT<unsigned int> c;
+
+void __fft2(const std::complex<double>* in, size_t n, size_t s, std::complex<double>* out)
+{
+	if (n == 1)
+		*out = *in;
+	else
+	{
+		size_t n2 = n / 2;
+		__fft2(&in[0], n2, s * 2, &out[0]);
+		__fft2(&in[s], n2, s * 2, &out[n2]);
+		for (size_t k = 0; k < n2; k++)
+		{
+			std::complex<double> e = out[k];
+			double d = k * 2 * M_PI / n;
+			std::complex<double> o = out[k + n2] * std::conj(std::complex<double>(cos(d), sin(d)));
+			out[k] = e + o;
+			out[k + n2] = e - o;
+		}
+	}
+}
+
+void _dft(const std::complex<double>* in, size_t m, std::complex<double>* out)
+{
+	for (size_t k = 0; k < m; k++)
+	{
+		out[k] = 0;
+		for (size_t n = 0; n < m; n++)
+		{
+			double d = (k * n) * (2 * M_PI) / m;
+			out[k] += in[n] * conj(std::complex<double>(cos(d), sin(d)));
+		}
+	}
+}
+
+void __fft(const std::complex<double>* in, size_t n, size_t s, std::complex<double>* out, const size_t* factList)
+{
+	if (n == 1)
+		*out = *in;
+	else
+	{
+		size_t n2 = n / *factList;
+		for (size_t k = 0; k < *factList; k++)
+			__fft(&in[s * k], n2, s * *factList, &out[n2 * k], &factList[1]);
+		for (size_t i = 1; i < *factList; i++)
+			for (size_t k = 0; k < n2; k++)
+			{
+				double d = (i * k) * (2 * M_PI) / n;
+				out[i * n2 + k] *= std::conj(std::complex<double>(cos(d), sin(d)));
+			}
+		std::complex<double>* temp = new std::complex<double>[*factList * 2];
+		for (size_t k = 0; k < n2; k++)
+		{
+			for (size_t i = 0; i < *factList; i++)
+				temp[i] = out[k + i * n2];
+
+			_dft(temp, *factList, &temp[*factList]);
+
+			for (size_t i = 0; i < *factList; i++)
+				out[k + i * n2] = temp[*factList + i];
+		}
+		delete[] temp;
+	}
+}
+void _fft(const std::complex<double>* in, size_t n, std::complex<double>* out)
+{
+	typedef fft::internal::PrimeFactorize<size_t> fact;
+	__fft(in, n, 1, out, &fact::expand(fact::factorize(n))[0]);
+}
+
 int main(int argc, char* argv[])
 {
 	std::cout << std::fixed << std::setprecision(std::numeric_limits<fft_out_part_type>::digits10 + 2);
 
-	std::chrono::time_point<std::chrono::steady_clock> start, end;
+	std::complex<double>* in = new std::complex<double>[16];
+	std::copy(&in_data[0], &in_data[5], in);
+	std::complex<double>* out0 = new std::complex<double>[16];
+	_fft(in, 15, out0);
+	std::complex<double>* out1 = new std::complex<double>[16];
+	_dft(in, 15, out1);
+	for (int i = 0; i < 15; i++)
+		if (std::abs(out0[i] - out1[i]) > 0.000000001)
+			std::cout << i << ": " << out0[i] << '|' << out1[i] << std::endl;
+
+	/*std::chrono::time_point<std::chrono::steady_clock> start, end;
 	__optimize_barrier();
 	ctfft = new ctfft2();
 	__optimize_barrier();
@@ -75,7 +160,7 @@ int main(int argc, char* argv[])
 	end = std::chrono::steady_clock::now();
 	__optimize_barrier();
 	delete ctfft;
-	std::cout << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() / 1000000.0 << std::endl;
+	std::cout << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() / 1000000.0 << std::endl;*/
 
 	/*for (size_t i = fft_size; i--;)
 		out[i] = std::conj(out[i]);

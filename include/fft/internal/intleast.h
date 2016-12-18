@@ -1,3 +1,4 @@
+#pragma once
 #ifndef __FFT_INTERNAL_INTLEAST_H__
 #define __FFT_INTERNAL_INTLEAST_H__
 

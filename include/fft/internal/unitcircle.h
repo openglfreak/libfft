@@ -1,12 +1,16 @@
+#pragma once
 #ifndef __FFT_INTERNAL_UNITCIRCLE_H__
 #define __FFT_INTERNAL_UNITCIRCLE_H__
+
+#include <stddef.h>
 
 #include <complex>
 #include <algorithm>
 #include <iterator>
 #include <math.h>
-#include "../internal/pi.h"
-#include "../internal/num.h"
+
+#include <fft/internal/pi.h>
+#include <fft/internal/num.h>
 
 namespace fft
 {
@@ -102,7 +106,7 @@ namespace fft
 			}
 		};
 
-		template<typename T, size_t _PartLength, size_t _Start = 0, size_t _Length = _PartLength>
+		template<typename T, size_t _PartLength, size_t _Start, size_t _Length = _PartLength>
 		class UnitCircle : public _UnitCircle<T,_PartLength,_Start,_Length,Num<T>::number_type> {};
 	}
 }

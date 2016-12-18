@@ -1,6 +1,8 @@
 #ifndef __FFT_CTFFT2_CTFFT2_H__
 #define __FFT_CTFFT2_CTFFT2_H__
 
+#include <stddef.h>
+
 #include <complex>
 #include <iterator>
 #include <algorithm>
@@ -8,12 +10,12 @@
 #ifdef _FFT_USE_C99_COMPLEX
 #include <complex.h>
 #endif // _FFT_USE_C99_COMPLEX
-#include "../internal/pi.h"
-#include "../internal/num.h"
-#include "../internal/pow.h"
-#include "../internal/log.h"
-#include "../internal/unitcircle.h"
-#include "../internal/bitreversedcounter.h"
+#include <fft/internal/pi.h>
+#include <fft/internal/num.h>
+#include <fft/internal/pow.h>
+#include <fft/internal/log.h>
+#include <fft/internal/unitcircle.h>
+#include <fft/internal/bitreversedcounter.h>
 
 namespace fft
 {

@@ -1,3 +1,4 @@
+#pragma once
 #ifndef __FFT_INTERNAL_PI_H__
 #define __FFT_INTERNAL_PI_H__
 

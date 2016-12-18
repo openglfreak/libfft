@@ -1,3 +1,4 @@
+#pragma once
 #ifndef __FFT_INTERNAL_LOG2_H__
 #define __FFT_INTERNAL_LOG2_H__
 

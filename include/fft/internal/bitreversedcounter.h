@@ -1,3 +1,4 @@
+#pragma once
 #ifndef __FFT_INTERNAL_BITREVERSEDCOUNTER_H__
 #define __FFT_INTERNAL_BITREVERSEDCOUNTER_H__
 
@@ -6,7 +7,8 @@
 #include <intrin.h>
 #endif
 #include <limits.h>
-#include "../internal/intleast.h"
+
+#include <fft/internal/intleast.h>
 
 namespace fft
 {

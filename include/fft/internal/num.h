@@ -1,3 +1,4 @@
+#pragma once
 #ifndef __FFT_INTERNAL_NUM_H__
 #define __FFT_INTERNAL_NUM_H__
 
@@ -5,7 +6,8 @@
 #ifdef _FFT_USE_C99_COMPLEX
 #include <complex.h>
 #endif // _FFT_USE_C99_COMPLEX
-#include "../internal/pi.h"
+
+#include <fft/internal/pi.h>
 
 namespace fft
 {
